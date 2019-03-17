@@ -9,8 +9,9 @@ N.B. si riporta la soluzione della sola parte informatica
 ## Progettazione base di dati
 ### Legenda notazione utilizzata
 Utilizzo la notazione:
+
 | formato | significato |
-| --- | --- |
+| :-----: | ----------- |
 | **attr** | Attributo identificativo dell'entità cui appartiene (parte della chiave primaria) |
 | *attr* | Attributo identificativo di un'altra entità (chiave esterna) |
 | {attr} | Attributo composto: può essere un aggregato di attributi |
@@ -126,10 +127,12 @@ CREATE TABLE Noleggio (
 ````
 ## Progettazione pagine web
 Tutte le pagine del sito avranno la medesima struttura generale seguente:
-| header | Logo | Chi siamo | Contatti | Privacy | Profilo/Login |
-| --- | --- | --- | --- | --- | --- |
-| **Main content**: | Contenuto dipendente dalla singola pagina |
-| **footer** | **logo** | **address** | **e-mail** | ... |
+
+| section | content |
+| --- | :-: |
+| header | ```Logo  Chi siamo       Contatti       Privacy      Profilo/Login``` |
+| content: | Contenuto dipendente dalla singola pagina |
+| footer | ``` indirizzo e-mail disclaimer privacy```|
 
 con ovvi link per le diverse funzionalità generali.
 ### a) mappa delle stazioni
