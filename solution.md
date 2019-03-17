@@ -63,12 +63,25 @@ Relazioni (non ottimizzate/normalizzate):
 * Noleggio(***bicicletta***, ***utente***, *stazionePrelievo*, **dataOraPrelievo**, *stazioneRiconsegna*?, dataOraRiconsegna?, costo?)
 ### Progettazione fisica
 Per questioni di efficienza si introduce una chiave surrogata in Stazione:
-Stazione(**codice**, indirizzo!, [totali], [liberi], [occupati])
+* Stazione(**codice**, indirizzo!, [totali], [liberi], [occupati])
 
 Per questioni di efficienza si possono introdurre indici per facilitare le ricerche, oltre a quelli automatici per le chiavi primarie ed esterne.  
 Indici:
 * per Utente: alfabetico(cognome, nome), unique(email), unique(telefono), unique(username), ...
 * per Stazione: unique(indirizzo)
+
+Per quanto riguarda i campi calcolati di Stazione, si considerano in base alle ipotesi i seguenti volumi di dati e numero di operazioni al giorno:
+
+| Tabella | righe | CREATE | READ | UPDATE | DELETE | Note |
+| --- | --: | :-: | :-: | :-: | :-: | --- |
+| Stazione | 20 | 0 | 1k | 2k | 0 | 1R+2U/noleggio |
+| Bicicletta | 1k | 0 | 0 | 2k | 0 | 2U/noleggio |
+| Utente | 10k | 1 | 2k | 0 | 0 | 2R/noleggio |
+| Noleggio | 1M | 1k | 0 | 1k | 0 | storico di 3 anni |
+
+Data la frequenza di consultazione delle stazioni per conoscerne la disponibilità di biciclette/slot, si ritiene opportuno memorizzare i campi calcolati [liberi] e [occupati] e magari anche [totale] (mai modificato), aggiornandoli tramite dei trigger:
+* NuovoNoleggio AFTER INSERT ON Noleggio: imposta a NULL la posizione attuale della bicicletta, aumenta/decrementa [liberi] e [occupati] della stazione di prelievo
+* FineNoleggio BEFORE UPDATE ON Noleggio: imposta a stazRiconsegna la posizione attuale della bicicletta, decrementa/aumenta [liberi] e [occupati] della stazione di riconsegna e calcola il costo di noleggio
 
 Si inserisce il codice per la creazione del database anche se non richiesto dalla traccia:
 ````sql
@@ -99,8 +112,8 @@ CREATE TABLE Utente (
 CREATE TABLE Stazione (
 	id INT AUTO_INCREMENT COMMENT "Unique station id",
 	indirizzo VARCHAR(100) NOT NULL COMMENT "Indirizzo stazione",
-	liberi INT NOT NULL DEFAULT 50 COMMENT "Slot liberi",
-	occupati INT NOT NULL DEFAULT 0 COMMENT "Slot occupati",
+	liberi INT NOT NULL DEFAULT 0 COMMENT "Slot liberi",
+	occupati INT NOT NULL DEFAULT 50 COMMENT "Slot occupati",
 	totali INT NOT NULL DEFAULT 50 COMMENT "Slot totali",
 	PRIMARY KEY(id),
     CONSTRAINT TertiumNonDatur CHECK(liberi + occupati = totali),
@@ -124,6 +137,22 @@ CREATE TABLE Noleggio (
 	PRIMARY KEY(bicicletta, utente, tempoPrelievo),
 	CONSTRAINT NoleggioFinito CHECK(ISNULL(stazRiconsegna) = ISNULL(tempoRiconsegna))
 );
+DELIMITER //
+CREATE TRIGGER NuovoNoleggio AFTER INSERT ON Noleggio FOR EACH ROW
+  BEGIN
+    UPDATE Bicicletta SET stazione = NULL WHERE id = NEW.bicicletta;
+    UPDATE Stazione SET liberi = liberi + 1, occupati = occupati - 1
+      WHERE id = NEW.stazPrelievo;
+  END;
+//
+CREATE TRIGGER FineNoleggio AFTER UPDATE ON Noleggio FOR EACH ROW
+  BEGIN
+    UPDATE Bicicletta SET stazione = NEW.stazRiconsegna WHERE id = NEW.bicicletta;
+    UPDATE Stazione SET liberi = liberi - 1, occupati = occupati + 1
+      WHERE id = NEW.stazRiconsegna;
+  END;
+//
+DELIMITER ;
 ````
 ## Progettazione pagine web
 Tutte le pagine del sito avranno la medesima struttura generale seguente:
