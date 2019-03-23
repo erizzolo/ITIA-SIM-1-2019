@@ -52,18 +52,18 @@ Conviene trasformare l'associazione Noleggio in entità, data la presenza di att
 
 Possibili varianti sono:
 * specializzazione di Bicicletta in Parcheggiata/Noleggiata
-* specializzazione di Noleggio in In corso/Passato
+* specializzazione di Noleggio in In corso/Passato (see [noleggio](noleggio.md))
 * entità debole Smartcard posseduta da Utente che partecipa a Noleggio al posto di Utente
 
 ### Progettazione logica
 Relazioni (non ottimizzate/normalizzate):
 * Stazione(**indirizzo**, [totali], [liberi], [occupati])
-* Utente (**codice**, cognome, nome, telefono, email!, username!, password, smartcard!, card type, card number, card expiry, report interval, report type, last report)
-* Bicicletta(**codice**, *stazione*?)
+* Utente (**id**, cognome, nome, telefono, email!, username!, password, smartcard!, card type, card number, card expiry, report interval, report type, last report)
+* Bicicletta(**id**, *stazione*?)
 * Noleggio(***bicicletta***, ***utente***, *stazionePrelievo*, **dataOraPrelievo**, *stazioneRiconsegna*?, dataOraRiconsegna?, costo?)
 ### Progettazione fisica
 Per questioni di efficienza si introduce una chiave surrogata in Stazione:
-* Stazione(**codice**, indirizzo!, [totali], [liberi], [occupati])
+* Stazione(**id**, indirizzo!, [totali], [liberi], [occupati])
 
 Per questioni di efficienza si possono introdurre indici per facilitare le ricerche, oltre a quelli automatici per le chiavi primarie ed esterne.  
 Indici:
@@ -135,6 +135,14 @@ CREATE TABLE Noleggio (
 	tempoRiconsegna TIMESTAMP NULL DEFAULT NULL COMMENT "Istante riconsegna",
     costo DECIMAL(6,2) NULL DEFAULT NULL COMMENT "Costo noleggio, dopo riconsegna",
 	PRIMARY KEY(bicicletta, utente, tempoPrelievo),
+	CONSTRAINT Utilizzo FOREIGN KEY (bicicletta) REFERENCES Bicicletta(id)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT Prelievo FOREIGN KEY (stazPrelievo) REFERENCES Stazione(id)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT Riconsegna FOREIGN KEY (stazPrelievo) REFERENCES Stazione(id)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+	CONSTRAINT Responsabile FOREIGN KEY (ytente) REFERENCES Utente(id)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
 	CONSTRAINT NoleggioFinito CHECK(ISNULL(stazRiconsegna) = ISNULL(tempoRiconsegna))
 );
 DELIMITER //
